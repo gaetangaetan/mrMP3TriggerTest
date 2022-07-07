@@ -1,12 +1,12 @@
 #include <Arduino.h>
-#include <mrOTA.h>
+// #include <mrOTA.h>
 
-#include <ESP8266WiFiMulti.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
-#include <WiFiUdp.h>
-#include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
+// #include <ESP8266WiFiMulti.h>
+// #include <ESP8266WebServer.h>
+// #include <ESP8266mDNS.h>
+// #include <WiFiUdp.h>
+// #include <ESP8266HTTPClient.h>
+// #include <WiFiClient.h>
 
 /*
   Controlling the Qwiic MP3 Trigger with I2C Commands
@@ -37,33 +37,12 @@
 #include "SparkFun_Qwiic_MP3_Trigger_Arduino_Library.h" //http://librarymanager/All#SparkFun_MP3_Trigger
 MP3TRIGGER mp3;
 int songnumber = 1;
+int nbsongs = 30;
 
 
 void setup()
 {
-      Serial.begin(115200);
-  
-
-  pinMode(BUTTON1,INPUT_PULLUP);
-  //pinMode(BUTTON2,INPUT_PULLUP);
-
-  //  WiFi.begin("OpenPoulpy", "youhououhou");  
-  //   Serial.print("Connecting to ");
-  // Serial.print("OpenPoulpy"); Serial.println(" ...");
-
-  // int i = 0;
-  // while (WiFi.status() != WL_CONNECTED) { // Wait for the Wi-Fi to connect
-  //   delay(1000);
-  //   Serial.print(++i); Serial.print(' ');
-  // }
-
-  // Serial.println('\n');
-  // Serial.println("Connection established!");  
-  // Serial.print("IP address:\t");
-  // Serial.println(WiFi.localIP());         // Send the IP address of the ESP8266 to the computer
-
-  checkOTA(BUTTON1,LOW,600000,"OpenPoulpy","youhououhou", "mrMP3Trigger","123");
-  
+  Serial.begin(115200);
 
   Wire.begin();
 
@@ -75,66 +54,62 @@ void setup()
       ;
   }
 
-  mp3.setVolume(30); //Volume can be 0 (off) to 31 (max)
-  
-  delay(2000);
-      Serial.print("Song count : ");
-      byte songcount = mp3.getSongCount();
-      Serial.println(songcount);
-
-  
-        mp3.playFile(1);
-        delay(500);
-      Serial.print("Playing the track number : ");
-      Serial.print(mp3.getSongCount());
-      Serial.print(" | Track name : ");
-      Serial.println(mp3.getSongName());
-
-  
-}
-
-void checkButtons()
-{
-  if(!digitalRead(BUTTON1))
+  if (mp3.hasCard() == false)
   {
-    
-      mp3.playFile(1);
-      delay(500);
-      Serial.print("Playing the track number : ");
-      Serial.print(mp3.getSongCount());
-      Serial.print(" | Track name : ");
-      Serial.println(mp3.getSongName());
-    
+    Serial.println("Qwiic MP3 is missing its SD card. Freezing...");
+    while (1)
+      ;
   }
-  
+
+  mp3.setVolume(30); //Volume can be 0 (off) to 31 (max)
+
+  Serial.print("Song count: ");
+  nbsongs=mp3.getSongCount();
+  Serial.println(nbsongs);
+
+  Serial.print("Volume level: ");
+  Serial.println(mp3.getVolume());
+
+  Serial.print("EQ Setting: ");
+  byte eqSetting = mp3.getEQ();
+  if (eqSetting == 0)
+    Serial.print("Normal");
+  else if (eqSetting == 1)
+    Serial.print("Pop");
+  else if (eqSetting == 2)
+    Serial.print("Rock");
+  else if (eqSetting == 3)
+    Serial.print("Jazz");
+  else if (eqSetting == 4)
+    Serial.print("Classic");
+  else if (eqSetting == 5)
+    Serial.print("Bass");
+  Serial.println();
+
+  Serial.print("Firmware version: ");
+  Serial.println(mp3.getVersion());
+
+  Serial.print("Playing the first track: ");
+  //mp3.playTrack(1);
+  delay(2000); //Give the WT2003S a bit of time before we check to see which track is playing (allow song to start)
+  String songName = mp3.getSongName();
+  Serial.println(songName);
 }
 
 void loop()
 {
-     while (mp3.isPlaying())
+  // delay(1000);
+  Serial.print("Playing the next track: ");
+  mp3.playFile(songnumber++);  
+  while (mp3.isPlaying() == true)
   {
     delay(50); // Don't pound the Qwiic MP3 too hard!
-    checkButtons();
   }
-   delay(500);
-  mp3.playNext();
-  delay(500);
-  Serial.print("Playing the track number : ");
-  Serial.print(mp3.getSongCount());
-  Serial.print(" | Track name : ");
-  Serial.println(mp3.getSongName());
-  
-  // Serial.println(songnumber);
-  //   mp3.playFile(songnumber);
-  // songnumber++;
-  
-  delay(500);
-  
-  
 
   
-
-
-  
-  
+  // mp3.playNext();
+  delay(500); //Give the WT2003S a bit of time before we check to see which track is playing (allow song to start)
+  String songName = mp3.getSongName();
+  Serial.println(songName);
+  if(songnumber>nbsongs)songnumber = 1;
 }
